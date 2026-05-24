@@ -12,6 +12,8 @@ How to decide who handles what.
 | Obsidian notes, Markdown templates, vault I/O, index | obsidian-engineer | obsidian/templates.py, obsidian/writer.py, Index.md generation |
 | Code review | ralph | Review PRs, check quality, suggest improvements |
 | Testing | python-engineer | Smoke tests, integration tests, edge case validation |
+| Tasks audit, speckit verification, implementation gap detection | tasks-auditor | Audit tasks.md vs codebase, report missing/broken tasks, route failures back to orchestrator |
+| `speckit.implement`, "implement the tasks", "implement speckit tasks" | Squad fan-out (skill: speckit-implement-squad-route) | **NEVER execute sequentially** — read skill `.github/skills/speckit-implement-squad-route/SKILL.md`, group tasks by agent, spawn in parallel per phase |
 | Scope & priorities | ralph | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 | `resume/`, PDF parsing, pdfplumber | python-engineer | resume/parser.py, resume/profile.py |

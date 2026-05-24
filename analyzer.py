@@ -31,25 +31,53 @@ class JobAnalysis:
 
 
 def _derive_tier(score: int) -> str:
-    # TODO (T017): implement tier mapping:
-    # score >= 80 → "🔥 Must Apply"
-    # score >= 60 → "✅ Good Fit"
-    # score >= 40 → "🤔 Maybe"
-    # score  < 40 → "❌ Skip"
-    raise NotImplementedError
+    if score >= 80:
+        return "🔥 Must Apply"
+    if score >= 60:
+        return "✅ Good Fit"
+    if score >= 40:
+        return "🤔 Maybe"
+    return "❌ Skip"
 
 
 def analyze(job: Job, profile: Profile, llm: BaseLLM) -> JobAnalysis:
-    # TODO (T017):
-    # 1. Build user_prompt with profile.raw_text, job.title, job.company,
-    #    job.location, job.description
-    # 2. Call llm.chat(system=_SYSTEM_PROMPT, user=user_prompt) → raw_response
-    # 3. Stage 1: try json.loads(raw_response); if JSONDecodeError → data = None
-    # 4. Stage 2: if data is None, try re.search(r'\{.*\}', raw_response, re.DOTALL);
-    #    if match, try json.loads(match.group()); if JSONDecodeError → data = None
-    # 5. Stage 3: if data is None, return sentinel JobAnalysis(score=0, tier="❌ Skip",
-    #    justification="[parse error]", matching_skills=[], missing_skills=[])
-    # 6. Clamp score: max(0, min(100, int(data.get("score", 0))))
-    # 7. Derive tier from score via _derive_tier() (authoritative override)
-    # 8. Return JobAnalysis(score, tier, justification, matching_skills, missing_skills)
-    raise NotImplementedError
+    user_prompt = (
+        f"RESUME:\n{profile.raw_text}\n\n"
+        f"JOB:\n"
+        f"Title: {job.title}\n"
+        f"Company: {job.company}\n"
+        f"Location: {job.location}\n"
+        f"Description: {job.description}"
+    )
+
+    raw_response = llm.chat(system=_SYSTEM_PROMPT, user=user_prompt)
+
+    # Stage 1: direct parse
+    data = None
+    try:
+        data = json.loads(raw_response)
+    except json.JSONDecodeError:
+        data = None
+
+    # Stage 2: extract JSON object via regex
+    if data is None:
+        match = re.search(r'\{.*\}', raw_response, re.DOTALL)
+        if match:
+            try:
+                data = json.loads(match.group())
+            except json.JSONDecodeError:
+                data = None
+
+    # Stage 3: parse failure sentinel
+    if data is None:
+        return JobAnalysis(score=0, tier="❌ Skip", justification="[parse error]", matching_skills=[], missing_skills=[])
+
+    score = max(0, min(100, int(data.get("score", 0))))
+    tier = _derive_tier(score)
+    return JobAnalysis(
+        score=score,
+        tier=tier,
+        justification=data.get("justification", ""),
+        matching_skills=data.get("matching_skills", []),
+        missing_skills=data.get("missing_skills", []),
+    )

@@ -8,7 +8,7 @@
 
     <key>ProgramArguments</key>
     <array>
-      <string>/usr/bin/python3</string>
+      <string>/Users/douglashennrich/Documents/Projetos/job-finder/.venv/bin/python</string>
       <string>/Users/douglashennrich/Documents/Projetos/job-finder/main.py</string>
     </array>
 
@@ -41,6 +41,8 @@
     <dict>
       <key>COPILOT_TOKEN</key>
       <string>REPLACE_WITH_GH_AUTH_TOKEN</string>
+      <key>PYTHONUNBUFFERED</key>
+      <string>1</string>
     </dict>
   </dict>
 </plist>

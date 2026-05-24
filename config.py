@@ -26,7 +26,7 @@ class Config:
         # TODO (T007):
         # 1. Call load_dotenv()
         # 2. Read all env vars with os.getenv(), applying defaults:
-        #    LLM_PROVIDER default "copilot", COPILOT_MODEL default "claude-sonnet-4-6",
+        #    LLM_PROVIDER default "copilot", COPILOT_MODEL default "claude-sonnet-4.6",
         #    OLLAMA_BASE_URL default "http://localhost:11434/v1", OLLAMA_MODEL default "llama3",
         #    SERPER_API_KEY default "", JOB_FINDER_FOLDER default "Job Finder",
         #    MIN_SCORE default "60" (cast to int), MAX_JOBS_PER_SOURCE default "20" (cast to int)
@@ -41,4 +41,53 @@ class Config:
         #    '[ERROR] Could not resolve COPILOT_TOKEN. Run "gh auth login" or set COPILOT_TOKEN in .env'
         # 7. Derive obsidian_job_folder = os.path.join(obsidian_vault_path, job_finder_folder)
         # 8. Return cls(...) with all fields
-        raise NotImplementedError
+        load_dotenv()
+
+        llm_provider = os.getenv("LLM_PROVIDER", "copilot")
+        copilot_model = os.getenv("COPILOT_MODEL", "claude-sonnet-4.6")
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+        serper_api_key = os.getenv("SERPER_API_KEY", "")
+        job_finder_folder = os.getenv("JOB_FINDER_FOLDER", "Job Finder")
+        min_score = int(os.getenv("MIN_SCORE", "60"))
+        max_jobs_per_source = int(os.getenv("MAX_JOBS_PER_SOURCE", "20"))
+        obsidian_vault_path = os.getenv("OBSIDIAN_VAULT_PATH", "")
+
+        copilot_token = os.getenv("COPILOT_TOKEN", "")
+        if not copilot_token:
+            result = subprocess.run(
+                ["gh", "auth", "token"], capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                copilot_token = result.stdout.strip()
+
+        if not os.path.exists(obsidian_vault_path):
+            raise ValueError(
+                f"[ERROR] Obsidian vault not found: {obsidian_vault_path} — set OBSIDIAN_VAULT_PATH correctly"
+            )
+
+        if llm_provider not in ("copilot", "ollama"):
+            raise ValueError(
+                f'[ERROR] LLM_PROVIDER must be "copilot" or "ollama", got: "{llm_provider}"'
+            )
+
+        if llm_provider == "copilot" and not copilot_token:
+            raise RuntimeError(
+                '[ERROR] Could not resolve COPILOT_TOKEN. Run "gh auth login" or set COPILOT_TOKEN in .env'
+            )
+
+        obsidian_job_folder = os.path.join(obsidian_vault_path, job_finder_folder)
+
+        return cls(
+            llm_provider=llm_provider,
+            copilot_token=copilot_token,
+            copilot_model=copilot_model,
+            ollama_base_url=ollama_base_url,
+            ollama_model=ollama_model,
+            serper_api_key=serper_api_key,
+            obsidian_vault_path=obsidian_vault_path,
+            job_finder_folder=job_finder_folder,
+            obsidian_job_folder=obsidian_job_folder,
+            min_score=min_score,
+            max_jobs_per_source=max_jobs_per_source,
+        )

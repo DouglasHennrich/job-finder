@@ -18,30 +18,37 @@ def note_exists(slug: str, job_folder: str) -> bool:
 
 
 def save_note(slug: str, content: str, job_folder: str) -> str:
-    # TODO (T029):
-    # 1. os.makedirs(job_folder, exist_ok=True)
-    # 2. Write content to {job_folder}/{slug}.md (utf-8)
-    # 3. Return os.path.abspath(path)
-    raise NotImplementedError
+    os.makedirs(job_folder, exist_ok=True)
+    path = os.path.join(job_folder, f"{slug}.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return os.path.abspath(path)
 
 
 def update_index(job_folder: str, index_content: str) -> None:
-    # TODO (T029):
-    # 1. os.makedirs(job_folder, exist_ok=True)
-    # 2. Write index_content to {job_folder}/Index.md (utf-8)
-    raise NotImplementedError
+    os.makedirs(job_folder, exist_ok=True)
+    with open(os.path.join(job_folder, "Index.md"), "w", encoding="utf-8") as f:
+        f.write(index_content)
 
 
 def load_existing_jobs(job_folder: str) -> list[dict]:
-    # TODO (T029):
-    # 1. If not os.path.isdir(job_folder), return []
-    # 2. glob.glob(os.path.join(job_folder, "*.md"))
-    # 3. For each file (skip Index.md):
-    #    a. slug = filename without .md
-    #    b. Read file content (utf-8)
-    #    c. Parse YAML frontmatter with re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-    #    d. For each "key: value" line, store in dict; strip quotes from value
-    #    e. Add "slug": slug to dict
-    #    f. Append to jobs list
-    # 4. Return jobs list
-    raise NotImplementedError
+    if not os.path.isdir(job_folder):
+        return []
+    files = glob.glob(os.path.join(job_folder, "*.md"))
+    jobs = []
+    for file_path in files:
+        slug = os.path.splitext(os.path.basename(file_path))[0]
+        if slug == "Index":
+            continue
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+        match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+        data: dict = {}
+        if match:
+            for line in match.group(1).splitlines():
+                if ": " in line:
+                    key, value = line.split(": ", 1)
+                    data[key.strip()] = value.strip().strip('"')
+        data["slug"] = slug
+        jobs.append(data)
+    return jobs

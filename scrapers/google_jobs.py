@@ -21,30 +21,101 @@ class GoogleJobsScraper(BaseScraper):
         self.api_key = api_key
 
     def fetch(self, query: str, max_results: int) -> list[Job]:
-        # TODO (T022):
-        # 1. If self.api_key is non-empty: try _fetch_serper(); on any Exception,
-        #    log warning and fall through to Playwright
-        # 2. Call asyncio.get_event_loop().run_until_complete(_fetch_playwright(...))
-        raise NotImplementedError
+        if self.api_key:
+            try:
+                return self._fetch_serper(query, max_results)
+            except Exception as e:
+                logger.warning(f"GoogleJobsScraper Serper failed: {e}")
+        # Playwright+stealth fallback (no API key required)
+        try:
+            return asyncio.run(self._fetch_playwright(query, max_results))
+        except Exception as e:
+            logger.warning(f"GoogleJobsScraper Playwright fallback failed: {e}")
+            return []
 
     def _fetch_serper(self, query: str, max_results: int) -> list[Job]:
-        # TODO (T022):
-        # 1. POST _SERPER_URL with json={"q":query,"gl":"br","hl":"pt-br","num":max_results},
-        #    headers={"X-API-KEY": self.api_key}, timeout=15
-        # 2. resp.raise_for_status(); data = resp.json()
-        # 3. Map data["jobs"] items → Job(title, company, location, description[:2000],
-        #    url=item["link"], source="google_jobs", posted_date=item.get("date"))
-        # 4. Return jobs list
-        raise NotImplementedError
+        resp = requests.post(
+            _SERPER_URL,
+            json={"q": query, "gl": "br", "hl": "pt-br", "num": max_results},
+            headers={"X-API-KEY": self.api_key, "Content-Type": "application/json"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        jobs: list[Job] = []
+        for item in data.get("jobs", [])[:max_results]:
+            jobs.append(
+                Job(
+                    title=item.get("title", ""),
+                    company=item.get("company", ""),
+                    location=item.get("location", ""),
+                    description=(item.get("description") or "")[:2000],
+                    url=item.get("link", ""),
+                    source="google_jobs",
+                    posted_date=item.get("date"),
+                )
+            )
+        return jobs
+
+    def _fetch_remotive(self, query: str, max_results: int) -> list[Job]:
+        import re as _re
+        resp = requests.get(
+            "https://remotive.com/api/remote-jobs",
+            params={"search": query, "limit": max_results},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        jobs: list[Job] = []
+        for item in resp.json().get("jobs", [])[:max_results]:
+            raw_desc = item.get("description", "")
+            description = _re.sub(r"<[^>]+>", " ", raw_desc).strip()[:2000]
+            jobs.append(
+                Job(
+                    title=item.get("title", ""),
+                    company=item.get("company_name", ""),
+                    location=item.get("candidate_required_location", "Remote"),
+                    url=item.get("url", ""),
+                    description=description,
+                    source="remotive",
+                )
+            )
+        return jobs
 
     async def _fetch_playwright(self, query: str, max_results: int) -> list[Job]:
-        # TODO (T022):
-        # 1. Import async_playwright and stealth_async
-        # 2. Launch chromium headless, apply stealth_async
-        # 3. Navigate to https://www.google.com/search?q={encoded}&ibp=htl;jobs
-        # 4. Sleep random.uniform(2, 4)
-        # 5. query_selector_all("div[data-jiz]")
-        # 6. For each card up to max_results: extract h2 (title), company el, link href
-        # 7. Append Job(..., source="google_jobs"); continue on any Exception
-        # 8. Close browser; return jobs
-        raise NotImplementedError
+        from playwright.async_api import async_playwright
+        from playwright_stealth import Stealth
+
+        encoded_query = urllib.parse.quote_plus(query)
+        jobs: list[Job] = []
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await Stealth().apply_stealth_async(page)
+            await page.goto(
+                f"https://www.google.com/search?q={encoded_query}&ibp=htl;jobs"
+            )
+            await asyncio.sleep(random.uniform(2, 4))
+            cards = await page.query_selector_all("div[data-jiz]")
+            for card in cards[:max_results]:
+                try:
+                    h2 = await card.query_selector("h2")
+                    title = await h2.inner_text() if h2 else ""
+                    company_el = await card.query_selector("[data-company-name]")
+                    company = await company_el.inner_text() if company_el else ""
+                    link_el = await card.query_selector("a")
+                    url = await link_el.get_attribute("href") if link_el else ""
+                    jobs.append(
+                        Job(
+                            title=title,
+                            company=company,
+                            location="Remote",
+                            description="",
+                            url=url or "",
+                            source="google_jobs",
+                        )
+                    )
+                except Exception as card_err:
+                    logger.debug(f"Card extraction error: {card_err}")
+                    continue
+            await browser.close()
+        return jobs

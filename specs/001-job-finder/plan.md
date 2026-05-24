@@ -46,13 +46,19 @@ macOS Python 3.11+ CLI tool that parses a PDF résumé with pdfplumber, scrapes 
 
 ## Constitution Check
 
-*Constitution not yet authored for this project (template is still placeholder). No gates enforced.*
+*Gates evaluated against `.specify/memory/constitution.md` v1.0.0*
 
-| Gate | Status | Note |
-|------|--------|------|
-| No existing constitution | ✅ Pass | Template is empty — no rules to evaluate |
-
-*Post-Phase-1 re-check*: Design remains single-project CLI with no architectural complexity violations.
+| Gate | Principle | Status | Note |
+|------|-----------|--------|------|
+| No hard-coded secrets | I. Configuration-First | ✅ Pass | All config via `.env`; `COPILOT_TOKEN` auto-detected via `gh auth token` |
+| Fail-fast on bad config | I. Configuration-First | ✅ Pass | `Config.load()` raises `ValueError`/`RuntimeError` before pipeline starts |
+| Per-source failure isolation | II. Graceful Degradation | ✅ Pass | Each `scraper.fetch()` wrapped in `try/except`; pipeline continues |
+| LLM parse fallback chain | III. AI Output Safety | ✅ Pass | 3-stage: `json.loads` → regex → sentinel; score clamped `[0,100]` |
+| Tier derived by app code | III. AI Output Safety | ✅ Pass | `_derive_tier(score)` is authoritative; LLM tier field ignored |
+| Plain Markdown + YAML only | IV. Obsidian-Native Storage | ✅ Pass | No plugins; frontmatter only; `Index.md` fully regenerated each run |
+| Slug-based deduplication | IV. Obsidian-Native Storage | ✅ Pass | `slugify(title + company)` in-memory + vault check |
+| No server/DB/API | V. CLI Simplicity | ✅ Pass | Single `python main.py`; launchd scheduling only |
+| Pipeline ≤ 10 min | V. CLI Simplicity | ✅ Pass | 3 sources × 2 queries × 20 jobs; no blocking waits except Playwright |
 
 ---
 

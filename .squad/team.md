@@ -16,6 +16,7 @@
 | scraping-engineer | Web Scraping Engineer | [charter](agents/scraping-engineer/charter.md) | active |
 | ai-engineer | AI Integration Engineer | [charter](agents/ai-engineer/charter.md) | active |
 | obsidian-engineer | Obsidian Storage Engineer | [charter](agents/obsidian-engineer/charter.md) | active |
+| tasks-auditor | Speckit Tasks Auditor | [charter](agents/tasks-auditor/charter.md) | active |
 
 ## Project Context
 
