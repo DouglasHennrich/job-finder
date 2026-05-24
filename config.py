@@ -18,6 +18,7 @@ class Config:
     obsidian_vault_path: str
     job_finder_folder: str
     obsidian_job_folder: str
+    obsidian_notes_folder: str
     min_score: int
     max_jobs_per_source: int
 
@@ -77,6 +78,7 @@ class Config:
             )
 
         obsidian_job_folder = os.path.join(obsidian_vault_path, job_finder_folder)
+        obsidian_notes_folder = os.path.join(obsidian_job_folder, "jobs")
 
         return cls(
             llm_provider=llm_provider,
@@ -88,6 +90,7 @@ class Config:
             obsidian_vault_path=obsidian_vault_path,
             job_finder_folder=job_finder_folder,
             obsidian_job_folder=obsidian_job_folder,
+            obsidian_notes_folder=obsidian_notes_folder,
             min_score=min_score,
             max_jobs_per_source=max_jobs_per_source,
         )

@@ -120,7 +120,7 @@ def main() -> None:
 
     new_pairs: list[tuple[str, Job]] = []
     for slug, job in unique_pairs:
-        if note_exists(slug, cfg.obsidian_job_folder):
+        if note_exists(slug, cfg.obsidian_notes_folder):
             skipped_dup += 1
         else:
             new_pairs.append((slug, job))
@@ -147,13 +147,13 @@ def main() -> None:
         if analysis.score >= cfg.min_score:
             date_str = datetime.now().strftime("%Y-%m-%d")
             content = render_job_note(job, analysis, date_str)
-            path = save_note(slug, content, cfg.obsidian_job_folder)
+            path = save_note(slug, content, cfg.obsidian_notes_folder)
             print(f"[SAVED] {slug}.md → {path}")
             saved += 1
         else:
             skipped_score += 1
 
-    existing = load_existing_jobs(cfg.obsidian_job_folder)
+    existing = load_existing_jobs(cfg.obsidian_notes_folder)
     index_content = render_index(existing)
     update_index(cfg.obsidian_job_folder, index_content)
     print(f"[INDEX] Updated Index.md with {len(existing)} jobs")
