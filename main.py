@@ -21,14 +21,22 @@ from resume.parser import load_profile_cache, parse_pdf, save_profile_cache, sav
 from scrapers.base import Job
 from scrapers.google_jobs import GoogleJobsScraper
 from scrapers.himalayas import HimalayasScraper
-from scrapers.indeed import IndeedScraper
 
 
 def _build_queries() -> list[str]:
-    """Fixed query set targeting Backend/FullStack Node.js remote/LATAM roles."""
+    """Generic queries for scrapers that accept free-text search (e.g. Himalayas)."""
     return [
         "senior fullstack developer nodejs react remote",
         "desenvolvedor fullstack senior nodejs react remoto",
+    ]
+
+
+def _build_serper_queries() -> list[str]:
+    """Pre-formatted Serper site-search queries for LinkedIn, Inhire and Indeed."""
+    sites = "(site:inhire.app OR site:linkedin.com/jobs OR site:indeed.com)"
+    return [
+        f'{sites} ("full stack") ("node") ("react") remote',
+        f'{sites} ("full stack") ("nodejs") ("react") remoto',
     ]
 
 
@@ -67,10 +75,8 @@ def main() -> None:
         print(e)
         sys.exit(1)
 
-    print(
-        f"[LLM] Provider: {cfg.llm_provider} "
-        f"({cfg.copilot_model if cfg.llm_provider == 'copilot' else cfg.ollama_model})"
-    )
+    model_name = cfg.copilot_model if cfg.llm_provider == "copilot" else cfg.ollama_model
+    print(f"[LLM] Provider: {cfg.llm_provider} ({model_name})")
 
     try:
         profile = load_profile_cache(cfg.obsidian_job_folder)
@@ -86,19 +92,20 @@ def main() -> None:
         sys.exit(1)
 
     queries = _build_queries()
-    print(f"[QUERIES] {queries}")
+    serper_queries = _build_serper_queries()
+    print(f"[QUERIES] generic={queries}")
+    print(f"[QUERIES] serper={serper_queries}")
 
-    scrapers = [
-        HimalayasScraper(),
-        GoogleJobsScraper(api_key=cfg.serper_api_key),
-        IndeedScraper(),
+    scraper_pairs: list[tuple] = [
+        (HimalayasScraper(), queries),
+        (GoogleJobsScraper(api_key=cfg.serper_api_key), serper_queries),
     ]
 
     all_jobs: list[Job] = []
     scraper_errors = 0
 
-    for scraper in scrapers:
-        for query in queries:
+    for scraper, scraper_queries in scraper_pairs:
+        for query in scraper_queries:
             try:
                 jobs = scraper.fetch(query, cfg.max_jobs_per_source)
             except Exception as e:

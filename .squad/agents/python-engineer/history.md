@@ -15,7 +15,7 @@
 - Playwright fallback runs without exception but returns 0 jobs (Google's headless bot detection / `div[data-jiz]` selector stale).
 
 **T036 – Full pipeline E2E:**
-- Copilot LLM: `claude-sonnet-4.6` is NOT available on `models.inference.ai.azure.com`. Only `gpt-4o` and `gpt-4o-mini` are available. Updated `.env` `COPILOT_MODEL=gpt-4o`.
+- Copilot LLM: `claude-sonnet-4.6` is available via **Copilot Pro+**. The endpoint `models.inference.ai.azure.com` is for GitHub Models free tier (only `gpt-4o` / `gpt-4o-mini`). Copilot Pro+ uses a different underlying URL for Anthropic models — the same `CopilotLLM` client works as long as the token comes from a Pro+ account (via `gh auth token`). Model is now hardcoded as a constant `COPILOT_MODEL = "claude-sonnet-4.6"` in `llm/copilot.py`; `COPILOT_MODEL` env var removed.
 - IndeedScraper: `playwright_stealth` v2 API changed — `stealth_async` no longer exported; now uses `Stealth().apply_stealth_async()`. Scraper returns 0 (non-blocking).
 - HimalayasScraper: Works correctly, 20 jobs per query.
 - Pipeline completed successfully in ~98s: Saved 1 | Skipped (dup): 21 | Skipped (score): 18 | Errors: 0.

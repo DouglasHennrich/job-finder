@@ -47,7 +47,7 @@ class Config:
         llm_provider = os.getenv("LLM_PROVIDER", "copilot")
         copilot_model = os.getenv("COPILOT_MODEL", "claude-sonnet-4.6")
         ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-        ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+        ollama_model = os.getenv("OLLAMA_MODEL", "qwen3.6:27b")
         serper_api_key = os.getenv("SERPER_API_KEY", "")
         job_finder_folder = os.getenv("JOB_FINDER_FOLDER", "Job Finder")
         min_score = int(os.getenv("MIN_SCORE", "60"))

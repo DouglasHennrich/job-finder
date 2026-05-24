@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-import random
-import urllib.parse
 
 import requests
 
@@ -11,111 +8,109 @@ from scrapers.base import BaseScraper, Job
 
 logger = logging.getLogger(__name__)
 
-_SERPER_URL = "https://google.serper.dev/jobs"
+_SERPER_SEARCH_URL = "https://google.serper.dev/search"
 
 
 class GoogleJobsScraper(BaseScraper):
-    """Scraper for Google Jobs via Serper.dev (primary) or Playwright (fallback)."""
+    """Scraper for job listings via Google site-search (Serper.dev /search endpoint).
+
+    Receives a pre-formatted query (e.g. from _build_serper_queries in main.py) that
+    already contains site: operators. Results are parsed with site-specific logic keyed
+    by URL domain: inhire.app, linkedin.com, indeed.com.
+    """
 
     def __init__(self, api_key: str = "") -> None:
         self.api_key = api_key
 
     def fetch(self, query: str, max_results: int) -> list[Job]:
-        if self.api_key:
-            try:
-                return self._fetch_serper(query, max_results)
-            except Exception as e:
-                logger.warning(f"GoogleJobsScraper Serper failed: {e}")
-        # Playwright+stealth fallback (no API key required)
+        if not self.api_key:
+            logger.warning("GoogleJobsScraper: SERPER_API_KEY not set — skipping")
+            return []
         try:
-            return asyncio.run(self._fetch_playwright(query, max_results))
+            return self._fetch_serper_search(query, max_results)
         except Exception as e:
-            logger.warning(f"GoogleJobsScraper Playwright fallback failed: {e}")
+            logger.warning(f"GoogleJobsScraper Serper search failed: {e}")
             return []
 
-    def _fetch_serper(self, query: str, max_results: int) -> list[Job]:
+    def _fetch_serper_search(self, query: str, max_results: int) -> list[Job]:
         resp = requests.post(
-            _SERPER_URL,
-            json={"q": query, "gl": "br", "hl": "pt-br", "num": max_results},
+            _SERPER_SEARCH_URL,
+            json={"q": query, "gl": "br", "hl": "pt-br", "num": min(max_results, 10)},
             headers={"X-API-KEY": self.api_key, "Content-Type": "application/json"},
             timeout=15,
         )
         resp.raise_for_status()
         data = resp.json()
         jobs: list[Job] = []
-        for item in data.get("jobs", [])[:max_results]:
-            jobs.append(
-                Job(
-                    title=item.get("title", ""),
-                    company=item.get("company", ""),
-                    location=item.get("location", ""),
-                    description=(item.get("description") or "")[:2000],
-                    url=item.get("link", ""),
-                    source="google_jobs",
-                    posted_date=item.get("date"),
-                )
-            )
+        for item in data.get("organic", [])[:max_results]:
+            job = self._parse_organic_result(item)
+            if job:
+                jobs.append(job)
         return jobs
 
-    def _fetch_remotive(self, query: str, max_results: int) -> list[Job]:
-        import re as _re
-        resp = requests.get(
-            "https://remotive.com/api/remote-jobs",
-            params={"search": query, "limit": max_results},
-            timeout=15,
+    def _parse_organic_result(self, item: dict) -> Job | None:
+        url = item.get("link", "")
+        title_raw = item.get("title", "")
+        snippet = (item.get("snippet") or "")[:2000]
+
+        if "inhire.app" in url:
+            return self._parse_inhire(url, title_raw, snippet)
+        if "linkedin.com" in url:
+            return self._parse_linkedin(url, title_raw, snippet)
+        if "indeed.com" in url:
+            return self._parse_indeed(url, title_raw, snippet)
+        return None
+
+    def _parse_inhire(self, url: str, title_raw: str, snippet: str) -> Job:
+        # Typical inhire title: "Senior Full Stack Developer - Company Name | inhire.app"
+        clean = title_raw.split("|")[0].strip()
+        parts = clean.split(" - ", 1)
+        title = parts[0].strip()
+        company = parts[1].strip() if len(parts) > 1 else ""
+        return Job(
+            title=title,
+            company=company,
+            location="Remote",
+            description=snippet,
+            url=url,
+            source="inhire",
         )
-        resp.raise_for_status()
-        jobs: list[Job] = []
-        for item in resp.json().get("jobs", [])[:max_results]:
-            raw_desc = item.get("description", "")
-            description = _re.sub(r"<[^>]+>", " ", raw_desc).strip()[:2000]
-            jobs.append(
-                Job(
-                    title=item.get("title", ""),
-                    company=item.get("company_name", ""),
-                    location=item.get("candidate_required_location", "Remote"),
-                    url=item.get("url", ""),
-                    description=description,
-                    source="remotive",
-                )
-            )
-        return jobs
 
-    async def _fetch_playwright(self, query: str, max_results: int) -> list[Job]:
-        from playwright.async_api import async_playwright
-        from playwright_stealth import Stealth
+    def _parse_linkedin(self, url: str, title_raw: str, snippet: str) -> Job:
+        # Typical LinkedIn title: "Company hiring Job Title in Location | LinkedIn"
+        # or "Job Title - Company | LinkedIn"
+        clean = title_raw.split("|")[0].strip()
+        title = clean
+        company = ""
+        if " hiring " in clean:
+            parts = clean.split(" hiring ", 1)
+            company = parts[0].strip()
+            title = parts[1].split(" in ")[0].strip()
+        elif " - " in clean:
+            parts = clean.split(" - ", 1)
+            title = parts[0].strip()
+            company = parts[1].strip()
+        return Job(
+            title=title,
+            company=company,
+            location="Remote",
+            description=snippet,
+            url=url,
+            source="linkedin",
+        )
 
-        encoded_query = urllib.parse.quote_plus(query)
-        jobs: list[Job] = []
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await Stealth().apply_stealth_async(page)
-            await page.goto(
-                f"https://www.google.com/search?q={encoded_query}&ibp=htl;jobs"
-            )
-            await asyncio.sleep(random.uniform(2, 4))
-            cards = await page.query_selector_all("div[data-jiz]")
-            for card in cards[:max_results]:
-                try:
-                    h2 = await card.query_selector("h2")
-                    title = await h2.inner_text() if h2 else ""
-                    company_el = await card.query_selector("[data-company-name]")
-                    company = await company_el.inner_text() if company_el else ""
-                    link_el = await card.query_selector("a")
-                    url = await link_el.get_attribute("href") if link_el else ""
-                    jobs.append(
-                        Job(
-                            title=title,
-                            company=company,
-                            location="Remote",
-                            description="",
-                            url=url or "",
-                            source="google_jobs",
-                        )
-                    )
-                except Exception as card_err:
-                    logger.debug(f"Card extraction error: {card_err}")
-                    continue
-            await browser.close()
-        return jobs
+    def _parse_indeed(self, url: str, title_raw: str, snippet: str) -> Job:
+        # Typical Indeed title: "Job Title - Company Name - Indeed"
+        clean = title_raw.replace(" - Indeed", "").replace(" | Indeed", "").strip()
+        parts = clean.split(" - ", 1)
+        title = parts[0].strip()
+        company = parts[1].strip() if len(parts) > 1 else ""
+        return Job(
+            title=title,
+            company=company,
+            location="Remote",
+            description=snippet,
+            url=url,
+            source="indeed",
+        )
+

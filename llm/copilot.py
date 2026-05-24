@@ -2,15 +2,20 @@ import openai
 
 from llm.base import BaseLLM
 
-_COPILOT_BASE_URL = "https://models.inference.ai.azure.com"
+_COPILOT_BASE_URL = "https://api.githubcopilot.com"
+_COPILOT_INTEGRATION_ID = "vscode-chat"
 
 
 class CopilotLLM(BaseLLM):
-    """LLM provider backed by GitHub Models (Azure inference endpoint)."""
+    """LLM provider backed by GitHub Copilot Pro+ API."""
 
     def __init__(self, token: str, model: str) -> None:
         self.model = model
-        self.client = openai.OpenAI(base_url=_COPILOT_BASE_URL, api_key=token)
+        self.client = openai.OpenAI(
+            base_url=_COPILOT_BASE_URL,
+            api_key=token,
+            default_headers={"Copilot-Integration-Id": _COPILOT_INTEGRATION_ID},
+        )
 
     def chat(self, system: str, user: str) -> str:
         response = self.client.chat.completions.create(
