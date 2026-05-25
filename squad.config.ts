@@ -77,7 +77,7 @@ export default defineSquad({
       },
       {
         pattern:
-          /scraper|playwright|stealth|indeed|google.?jobs|himalayas|serper|scraping|bot|delay|humaniz/i,
+          /scraper|playwright|stealth|indeed|google.?jobs|himalayas|serper|scraping|bot|delay|humaniz|linkedin|solides/i,
         agent: "scraping-engineer",
       },
       {
