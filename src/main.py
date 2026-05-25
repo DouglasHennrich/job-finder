@@ -96,6 +96,19 @@ def _build_serper_queries(profile: Profile) -> list[str]:
     ]
 
 
+def _build_solides_queries(profile: Profile) -> list[str]:
+    """Build title-only queries for Solides.
+
+    The Solides API filters by job title — long free-text queries with skills
+    or location keywords return 0 results. We send only the role (stripped of
+    seniority) plus a Portuguese variant to maximise coverage.
+    """
+    stripped = _strip_seniority(profile.role) if profile.role else ""
+    if not stripped:
+        return ["fullstack developer", "desenvolvedor fullstack"]
+    return [stripped, f"desenvolvedor {stripped.split()[0]}"]
+
+
 def main() -> None:
     print(f"[JOB FINDER] Starting run — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     start = time.time()
@@ -138,14 +151,16 @@ def main() -> None:
 
     queries = _build_queries(profile)
     serper_queries = _build_serper_queries(profile)
+    solides_queries = _build_solides_queries(profile)
     print(f"[QUERIES] generic={queries}")
     print(f"[QUERIES] serper={serper_queries}")
+    print(f"[QUERIES] solides={solides_queries}")
 
     scraper_pairs: list[tuple] = [
         (HimalayasScraper(), queries),
         (GoogleJobsScraper(api_key=cfg.serper_api_key), serper_queries),
         (LinkedInScraper(), queries),
-        (SolidesScraper(), queries),
+        (SolidesScraper(), solides_queries),
         (CapgeminiScraper(), queries),
     ]
     print("[SCRAPER] Registered: HimalayasScraper, GoogleJobsScraper, LinkedInScraper, SolidesScraper, CapgeminiScraper")
@@ -227,7 +242,7 @@ def main() -> None:
             )
             skipped_score += 1
 
-    active_providers = sorted({job.source for job in all_jobs})
+    active_providers = sorted({scraper.provider_name for scraper, _ in scraper_pairs})
     existing = load_existing_jobs(cfg.obsidian_notes_folder)
     index_content = render_index(existing, discarded_count=len(discarded_slugs), providers=active_providers)
     update_index(cfg.obsidian_job_folder, index_content)

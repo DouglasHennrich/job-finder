@@ -18,6 +18,8 @@ _API_URL = "https://cg-jobstream-api.azurewebsites.net/api/job-search"
 class CapgeminiScraper(BaseScraper):
     """Capgemini public job board scraper using the cg-jobstream REST API."""
 
+    provider_name = "capgemini"
+
     def fetch(self, query: str, max_results: int) -> list[Job]:
         try:
             response = requests.get(

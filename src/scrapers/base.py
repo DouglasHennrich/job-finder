@@ -20,6 +20,9 @@ class Job:
 class BaseScraper(ABC):
     """Base class for all job source scrapers."""
 
+    #: Human-readable name shown in the Obsidian index providers list.
+    provider_name: str = "unknown"
+
     @abstractmethod
     def fetch(self, query: str, max_results: int) -> list[Job]:
         """Fetch job listings for the given query.

@@ -19,6 +19,8 @@ class GoogleJobsScraper(BaseScraper):
     by URL domain: inhire.app, linkedin.com, indeed.com.
     """
 
+    provider_name = "google_jobs"
+
     def __init__(self, api_key: str = "") -> None:
         self.api_key = api_key
 

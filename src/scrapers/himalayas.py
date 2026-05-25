@@ -14,6 +14,8 @@ _BASE_URL = "https://himalayas.app/jobs/api"
 class HimalayasScraper(BaseScraper):
     """Scraper for Himalayas.app public REST API."""
 
+    provider_name = "himalayas"
+
     def fetch(self, query: str, max_results: int) -> list[Job]:
         try:
             resp = requests.get(

@@ -19,6 +19,8 @@ _USER_AGENT = (
 class LinkedInScraper(BaseScraper):
     """LinkedIn public job search scraper using Playwright+stealth with humanised behaviour."""
 
+    provider_name = "linkedin"
+
     def fetch(self, query: str, max_results: int) -> list[Job]:
         try:
             return asyncio.run(self._async_fetch(query, max_results))

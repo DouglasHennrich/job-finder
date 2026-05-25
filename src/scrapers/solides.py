@@ -19,6 +19,8 @@ _HEADERS = {
 class SolidesScraper(BaseScraper):
     """Scraper for Solides public REST API."""
 
+    provider_name = "solides"
+
     def fetch(self, query: str, max_results: int) -> list[Job]:
         try:
             resp = requests.get(
