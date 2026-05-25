@@ -69,7 +69,7 @@
   - Makes a `GET` request to `https://apigw.solides.com.br/jobs/v3/portal-vacancies-new` with params `{"title": query, "locations": "", "take": max_results, "page": 1}` and headers `{"Origin": "https://vagas.solides.com.br", "Referer": "https://vagas.solides.com.br/"}`, timeout 15s
   - Calls `resp.raise_for_status()`; parses `resp.json()["data"]["data"]` as the list of job dicts
   - Filters to remote/home-office jobs only: keep items where `item.get("homeOffice") is True` or `item.get("jobType") == "home-office"`; if no items pass the filter, returns all items unfiltered (graceful fallback)
-  - Per item: `title` from `item["title"]`, `company` from `item["companyName"]`, `location` as `"Remote"` if `homeOffice=True` else `"{city.name}, {state.code}"`, `url` from `item["redirectLink"]`, `posted_date` from `item["createdAt"]`
+  - Per item: `title` from `item["title"]`, `company` from `item["companyName"]`, `location` as `"Remote"` if `homeOffice=True` else `f"{item.get('city', {}).get('name', '')}, {item.get('state', {}).get('code', '')}"`, `url` from `item["redirectLink"]`, `posted_date` from `item["createdAt"]`
   - `description`: `item.get("description", "")` with HTML tags stripped via `re.sub(r"<[^>]+>", "", raw)`, truncated to 2000 chars
   - `salary`: `None` (Solides salary rarely populated)
   - Skips items where `url` or `title` is empty
@@ -105,7 +105,7 @@
 
 - [ ] T007 Verify `scrapers/__init__.py` does not need updating (it is currently empty — no re-exports required; confirm this is still the case and leave it empty if so)
 - [ ] T008 [P] Run full smoke-test suite: `python -m pytest tests/unit/ -v` and confirm all existing tests plus `test_linkedin_scraper.py` and `test_solides_scraper.py` pass (or gracefully skip if network unavailable)
-- [ ] T009 [P] Manual end-to-end smoke test per `quickstart.md`: run each scraper standalone using the inline Python snippets in `quickstart.md §Smoke-Testing` and confirm at least one returns a non-empty list (or gracefully degrades if the source is unreachable)
+- [ ] T009 [P] Manual end-to-end smoke test per `quickstart.md`: run each scraper standalone using the inline Python snippets in `quickstart.md §Smoke-Testing` and confirm at least one returns a non-empty list (or gracefully degrades if the source is unreachable); record wall-clock time for both scrapers combined — log a warning if the combined time exceeds 60s (verifies SC-005)
 
 ---
 

@@ -82,7 +82,7 @@ As a job seeker, I want both new scrapers (LinkedIn and Solides) to be fully int
 - **FR-003**: `LinkedInScraper` MUST return `Job` objects with `source="linkedin"` and at minimum: `title`, `company`, `url`
 - **FR-004**: `LinkedInScraper` MUST never raise an exception — on any failure it logs a warning and returns an empty list
 - **FR-005**: The system MUST include a `SolidesScraper` that implements `BaseScraper.fetch(query, max_results) -> list[Job]`
-- **FR-006**: `SolidesScraper` MUST adapt its scraping approach based on what vagas.solides.com.br exposes (REST API preferred; Playwright fallback)
+- **FR-006**: `SolidesScraper` MUST use the public REST API at `https://apigw.solides.com.br/jobs/v3/portal-vacancies-new` — confirmed by `research.md` Phase 0; no Playwright required
 - **FR-007**: `SolidesScraper` MUST return `Job` objects with `source="solides"` and at minimum: `title`, `company`, `url`
 - **FR-008**: `SolidesScraper` MUST never raise an exception — on any failure it logs a warning and returns an empty list
 - **FR-009**: Both scrapers MUST be registered in `main.py` so their results are included in the scoring and note-saving pipeline
