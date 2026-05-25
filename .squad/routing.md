@@ -7,9 +7,12 @@ How to decide who handles what.
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
 | Config, env, main pipeline, PDF parsing, resume | python-engineer | config.py, main.py, resume/parser.py, requirements.txt, launchd setup |
+| **[spec-003]** `src/` directory migration, pytest.ini, pythonpath setup | python-engineer | T002 pytest.ini, T003–T007 file moves, T008 plist update, T009 verification |
+| **[spec-003]** Pipeline registration of new scrapers in src/main.py | python-engineer | T013 CapgeminiScraper import + instantiation |
 | Web scraping, Playwright, Serper.dev, Himalayas, Indeed | scraping-engineer | scrapers/google_jobs.py, scrapers/indeed.py, scrapers/himalayas.py, bot evasion |
 | LinkedIn scraping, `scrapers/linkedin.py` | scraping-engineer | scrapers/linkedin.py, LinkedIn public job search, playwright-stealth |
 | Solides REST API, `scrapers/solides.py` | scraping-engineer | scrapers/solides.py, apigw.solides.com.br, HTML stripping, home-office filter |
+| **[spec-003]** Capgemini scraper, `src/scrapers/capgemini.py`, beautifulsoup4 | scraping-engineer | T010 capgemini.py, T011 base.py source comment, T012 test_capgemini_scraper.py |
 | LLM providers, prompt design, job fit scoring | ai-engineer | llm/ollama.py, llm/copilot.py, analyzer.py, prompt tuning |
 | Obsidian notes, Markdown templates, vault I/O, index | obsidian-engineer | obsidian/templates.py, obsidian/writer.py, Index.md generation |
 | Code review | ralph | Review PRs, check quality, suggest improvements |

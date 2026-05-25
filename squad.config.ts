@@ -20,7 +20,9 @@ export default defineSquad({
           { name: "pipeline orchestration", level: "expert" },
           { name: "python-dotenv", level: "expert" },
           { name: "asyncio", level: "proficient" },
+          { name: "src/ layout migration", level: "proficient" },
           { name: "launchd", level: "basic" },
+          { name: "pytest / pytest.ini configuration", level: "basic" },
         ],
       }),
       defineAgent({
@@ -32,6 +34,7 @@ export default defineSquad({
           { name: "Playwright async", level: "expert" },
           { name: "playwright-stealth", level: "expert" },
           { name: "REST API integration", level: "expert" },
+          { name: "BeautifulSoup4 / HTML parsing", level: "proficient" },
           { name: "Serper.dev", level: "proficient" },
           { name: "HTML DOM parsing", level: "proficient" },
           { name: "anti-bot evasion", level: "proficient" },
@@ -72,12 +75,12 @@ export default defineSquad({
     rules: [
       {
         pattern:
-          /config|env|dotenv|setup|main\.py|pipeline|pdf|pdfplumber|resume|parser|requirements|launchd/i,
+          /config|env|dotenv|setup|src[\/\\]main\.py|main\.py|pipeline|pdf|pdfplumber|resume|parser|requirements|launchd|pytest\.ini|pythonpath|src.*migrat/i,
         agent: "python-engineer",
       },
       {
         pattern:
-          /scraper|playwright|stealth|indeed|google.?jobs|himalayas|serper|scraping|bot|delay|humaniz|linkedin|solides/i,
+          /scraper|playwright|stealth|indeed|google.?jobs|himalayas|serper|scraping|bot|delay|humaniz|linkedin|solides|capgemini|beautifulsoup|bs4/i,
         agent: "scraping-engineer",
       },
       {
