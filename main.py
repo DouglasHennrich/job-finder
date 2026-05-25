@@ -23,6 +23,8 @@ from resume.parser import load_profile_cache, parse_pdf, save_profile_cache, sav
 from scrapers.base import Job
 from scrapers.google_jobs import GoogleJobsScraper
 from scrapers.himalayas import HimalayasScraper
+from scrapers.linkedin import LinkedInScraper
+from scrapers.solides import SolidesScraper
 
 
 def _build_queries() -> list[str]:
@@ -82,7 +84,10 @@ def main() -> None:
     scraper_pairs: list[tuple] = [
         (HimalayasScraper(), queries),
         (GoogleJobsScraper(api_key=cfg.serper_api_key), serper_queries),
+        (LinkedInScraper(), queries),
+        (SolidesScraper(), queries),
     ]
+    print("[SCRAPER] Registered: HimalayasScraper, GoogleJobsScraper, LinkedInScraper, SolidesScraper")
 
     all_jobs: list[Job] = []
     scraper_errors = 0

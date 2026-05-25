@@ -20,7 +20,7 @@
 
 **Purpose**: Update the shared base to declare the two new source values before implementing either scraper.
 
-- [ ] T001 Update `source` field comment in `scrapers/base.py` to include `"linkedin"` and `"solides"` as valid values (one-line change to the inline comment on the `source: str` field) <!-- squad:agent=scraping-engineer tier=lightweight -->
+- [x] T001 Update `source` field comment in `scrapers/base.py` to include `"linkedin"` and `"solides"` as valid values (one-line change to the inline comment on the `source: str` field) <!-- squad:agent=scraping-engineer tier=lightweight -->
 
 **Checkpoint**: `scrapers/base.py` is ready; both scrapers can be authored.
 
@@ -40,7 +40,7 @@
 
 **Independent Test**: Run `from scrapers.linkedin import LinkedInScraper; jobs = LinkedInScraper().fetch("senior fullstack nodejs react", 5); assert all(j.source == "linkedin" for j in jobs)` and verify at least one job returns with title, company, and URL — no other scraper or pipeline step needed.
 
-- [ ] T002 [US1] Implement `scrapers/linkedin.py` with `LinkedInScraper(BaseScraper)`: <!-- squad:agent=scraping-engineer tier=standard -->
+- [x] T002 [US1] Implement `scrapers/linkedin.py` with `LinkedInScraper(BaseScraper)`: <!-- squad:agent=scraping-engineer tier=standard -->
   - `fetch(query, max_results) -> list[Job]` calls `asyncio.run(self._async_fetch(...))`; wraps entire body in `try/except`; logs warning and returns `[]` on any failure
   - `_async_fetch` launches Playwright Chromium headless with user-agent header, applies `Stealth()` from playwright-stealth, and navigates to `https://www.linkedin.com/jobs/search?keywords={encoded_query}&location=Brazil&f_WT=2`
   - Applies humanisation: `await asyncio.sleep(random.uniform(1.5, 3.5))` after page load, random mouse move before querying cards
@@ -51,7 +51,7 @@
   - Returns `list[Job]` with `source="linkedin"`
   - Reference: `scrapers/indeed.py` for Playwright + stealth pattern; `research.md` §1 for selectors
 
-- [ ] T003 [US1] Write `tests/unit/test_linkedin_scraper.py` smoke test: <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T003 [US1] Write `tests/unit/test_linkedin_scraper.py` smoke test: <!-- squad:agent=python-engineer tier=lightweight -->
   - `test_linkedin_scraper_returns_list`: instantiates `LinkedInScraper()`, calls `fetch("fullstack developer", 3)`, asserts return value is a `list`
   - `test_linkedin_scraper_graceful_failure`: monkey-patches `asyncio.run` to raise `RuntimeError`; asserts `fetch(...)` returns `[]` without raising
   - `test_linkedin_job_source`: if any jobs are returned, asserts `job.source == "linkedin"` for all
@@ -64,7 +64,7 @@
 
 **Independent Test**: Run `from scrapers.solides import SolidesScraper; jobs = SolidesScraper().fetch("fullstack developer", 5); assert all(j.source == "solides" for j in jobs)` and verify at least one job returns.
 
-- [ ] T004 [P] [US2] Implement `scrapers/solides.py` with `SolidesScraper(BaseScraper)`: <!-- squad:agent=scraping-engineer tier=standard -->
+- [x] T004 [P] [US2] Implement `scrapers/solides.py` with `SolidesScraper(BaseScraper)`: <!-- squad:agent=scraping-engineer tier=standard -->
   - `fetch(query, max_results) -> list[Job]` wraps entire body in `try/except`; logs warning and returns `[]` on any failure
   - Makes a `GET` request to `https://apigw.solides.com.br/jobs/v3/portal-vacancies-new` with params `{"title": query, "locations": "", "take": max_results, "page": 1}` and headers `{"Origin": "https://vagas.solides.com.br", "Referer": "https://vagas.solides.com.br/"}`, timeout 15s
   - Calls `resp.raise_for_status()`; parses `resp.json()["data"]["data"]` as the list of job dicts
@@ -76,7 +76,7 @@
   - Returns `list[Job]` with `source="solides"`
   - Reference: `scrapers/himalayas.py` for `requests`-based pattern; `research.md` §2 for API contract
 
-- [ ] T005 [P] [US2] Write `tests/unit/test_solides_scraper.py` smoke test: <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T005 [P] [US2] Write `tests/unit/test_solides_scraper.py` smoke test: <!-- squad:agent=python-engineer tier=lightweight -->
   - `test_solides_scraper_returns_list`: instantiates `SolidesScraper()`, calls `fetch("fullstack", 3)`, asserts return value is a `list`
   - `test_solides_scraper_graceful_failure`: monkey-patches `requests.get` to raise `requests.RequestException`; asserts `fetch(...)` returns `[]` without raising
   - `test_solides_job_source`: if any jobs are returned, asserts `job.source == "solides"` for all
@@ -92,7 +92,7 @@
 
 **Independent Test**: Run `python main.py` and verify Obsidian notes appear with `source: linkedin` and/or `source: solides` in their YAML frontmatter.
 
-- [ ] T006 [US3] Register `LinkedInScraper` and `SolidesScraper` in `main.py`: <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T006 [US3] Register `LinkedInScraper` and `SolidesScraper` in `main.py`: <!-- squad:agent=python-engineer tier=lightweight -->
   - Add imports at top of file: `from scrapers.linkedin import LinkedInScraper` and `from scrapers.solides import SolidesScraper`
   - In the scraper list construction (near existing `GoogleJobsScraper`, `HimalayasScraper` instantiations), append `LinkedInScraper()` and `SolidesScraper()` — no constructor args needed
   - Verify the existing loop that calls `scraper.fetch(query, cfg.max_jobs_per_source)` for each scraper will cover the new scrapers without any further changes
@@ -103,9 +103,9 @@
 
 ## Final Phase: Polish & Cross-Cutting Concerns
 
-- [ ] T007 Verify `scrapers/__init__.py` does not need updating (it is currently empty — no re-exports required; confirm this is still the case and leave it empty if so) <!-- squad:agent=python-engineer tier=lightweight -->
-- [ ] T008 [P] Run full smoke-test suite: `python -m pytest tests/unit/ -v` and confirm all existing tests plus `test_linkedin_scraper.py` and `test_solides_scraper.py` pass (or gracefully skip if network unavailable) <!-- squad:agent=python-engineer tier=lightweight -->
-- [ ] T009 [P] Manual end-to-end smoke test per `quickstart.md`: run each scraper standalone using the inline Python snippets in `quickstart.md §Smoke-Testing` and confirm at least one returns a non-empty list (or gracefully degrades if the source is unreachable); record wall-clock time for both scrapers combined — log a warning if the combined time exceeds 60s (verifies SC-005) <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T007 Verify `scrapers/__init__.py` does not need updating (it is currently empty — no re-exports required; confirm this is still the case and leave it empty if so) <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T008 [P] Run full smoke-test suite: `python -m pytest tests/unit/ -v` and confirm all existing tests plus `test_linkedin_scraper.py` and `test_solides_scraper.py` pass (or gracefully skip if network unavailable) <!-- squad:agent=python-engineer tier=lightweight -->
+- [x] T009 [P] Manual end-to-end smoke test per `quickstart.md`: run each scraper standalone using the inline Python snippets in `quickstart.md §Smoke-Testing` and confirm at least one returns a non-empty list (or gracefully degrades if the source is unreachable); record wall-clock time for both scrapers combined — log a warning if the combined time exceeds 60s (verifies SC-005) <!-- squad:agent=python-engineer tier=lightweight -->
 
 ---
 

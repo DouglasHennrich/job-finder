@@ -7,6 +7,12 @@
 - **T002**: Pinned all production deps in `requirements.txt` from `>=` to `==` using exact versions per spec. `pytest>=7.0` kept flexible as it is dev-only.
 - **T035**: Replaced the 8-query cartesian product in `_build_queries()` with exactly 2 hardcoded strings — one EN, one PT-BR — per spec. No other logic in `main.py` was touched.
 
+### 2026-05-25 (Final Phase T007–T009)
+
+Final Phase (T007-T009): scrapers/__init__.py verified empty; full test suite 7 passed (17.15s); smoke tests executed — LinkedIn 5 jobs, Solides 4 jobs, combined 7.4s (under 60s limit).
+
+---
+
 ### 2026-05-24 (E2E Validation Run)
 
 **T025 – Google Jobs Scraper:**
@@ -28,3 +34,9 @@
 - Plist had `/usr/bin/python3` (system Python, Operation not permitted on macOS). Fixed to `.venv/bin/python`.
 - After fix, Python init hangs under launchd: stuck in `getpath_readlines` → `open$NOCANCEL` syscall during venv path resolution. Root cause: macOS sandbox or privacy framework blocking file access during Python initialization under `LimitLoadToSessionType = Aqua` launchd context.
 - Workaround needed: Either grant Full Disk Access to Terminal/Python, or use absolute Python path from Homebrew directly (not venv symlink).
+
+### 2026-05-25
+
+Phase 3 (T003): Created tests/unit/test_linkedin_scraper.py — 3 smoke tests: returns_list, graceful_failure, job_source
+Phase 4 (T005): Created tests/unit/test_solides_scraper.py — 4 smoke tests all passing
+Phase 5 (T006): Registered LinkedInScraper and SolidesScraper in main.py — imports + scraper list

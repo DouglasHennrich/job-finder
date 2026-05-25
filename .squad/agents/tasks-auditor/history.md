@@ -19,3 +19,4 @@
 - `specs/001-job-finder/plan.md` — implementation plan
 - `specs/001-job-finder/contracts/cli.md` — CLI contracts and smoke test commands
 - `.squad/routing.md` — agent routing table for escalation decisions
+2026-05-25: Audited 002-linkedin-solides-scrapers — 9/9 tasks verified ✅
