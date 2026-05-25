@@ -1,25 +1,21 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (none — initial authoring) → 1.0.0
-Added sections:
-  - Core Principles (I–V): all new
-  - Quality Gates: new
-  - Development Workflow: new
-  - Governance: new
-Removed sections: none (template placeholders replaced)
-Modified principles: n/a (first version)
+Version change: 1.0.0 → 1.0.1
+Modified principles:
+  - IV. Obsidian-Native Storage: added `_discarded.txt` rejected-score cache to storage
+    contract; updated rationale to remove "no external state file" claim.
+Added sections: none
+Removed sections: none
 
 Templates requiring updates:
   ✅ .specify/templates/constitution-template.md — source template, no change needed
-  ⚠  specs/001-job-finder/plan.md — Constitution Check section says "not yet authored";
-     should be updated to reference principles I–V now that constitution exists
-  ✅ .specify/templates/plan-template.md — generic gates placeholder is correct for a template
-  ✅ .specify/templates/spec-template.md — no constitution-specific sections
-  ✅ .specify/templates/tasks-template.md — no constitution-specific sections
+  ✅ .specify/templates/plan-template.md — no constitution-specific change needed
+  ✅ .specify/templates/spec-template.md — no change needed
+  ✅ .specify/templates/tasks-template.md — no change needed
+  ✅ specs/001-job-finder/plan.md — Constitution Check updated to v1.0.1 + new gate row
 
-Follow-up TODOs:
-  - Update specs/001-job-finder/plan.md Constitution Check to reference actual gates
+Follow-up TODOs: none
 -->
 
 # Job Finder Constitution
@@ -65,11 +61,13 @@ Notes MUST use plain Markdown with YAML frontmatter only. No Obsidian plugins, c
 CSS, JavaScript, or proprietary syntax are permitted. Filenames MUST use
 `slugify(f"{title} {company}")` for deterministic, filesystem-safe deduplication.
 `Index.md` MUST be fully regenerated on every successful run from the current vault
-state, never incrementally patched.
+state, never incrementally patched. Jobs rejected by score MUST be recorded as slugs in
+`_discarded.txt` (one slug per line, append-only) within the job notes folder so they
+are not re-scored on subsequent runs.
 
 **Rationale**: Plain Markdown survives Obsidian version upgrades, vault migrations, and
-non-Obsidian editors. Slug-based deduplication is portable and requires no external
-state file.
+non-Obsidian editors. Slug-based deduplication (notes + `_discarded.txt`) keeps the
+storage model portable and auditable without a database.
 
 ### V. CLI Simplicity (YAGNI)
 This is a single-user, single-machine local tool. No web server, no database, no
@@ -114,4 +112,4 @@ All implementation decisions MUST be evaluated against principles I–V before p
 Complexity that appears to violate Principle V (Simplicity) requires explicit justification
 documented in the relevant `plan.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-24 | **Last Amended**: 2026-05-24
+**Version**: 1.0.1 | **Ratified**: 2026-05-24 | **Last Amended**: 2026-05-24

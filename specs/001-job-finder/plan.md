@@ -46,7 +46,7 @@ macOS Python 3.11+ CLI tool that parses a PDF résumé with pdfplumber, scrapes 
 
 ## Constitution Check
 
-*Gates evaluated against `.specify/memory/constitution.md` v1.0.0*
+*Gates evaluated against `.specify/memory/constitution.md` v1.0.1*
 
 | Gate | Principle | Status | Note |
 |------|-----------|--------|------|
@@ -57,8 +57,9 @@ macOS Python 3.11+ CLI tool that parses a PDF résumé with pdfplumber, scrapes 
 | Tier derived by app code | III. AI Output Safety | ✅ Pass | `_derive_tier(score)` is authoritative; LLM tier field ignored |
 | Plain Markdown + YAML only | IV. Obsidian-Native Storage | ✅ Pass | No plugins; frontmatter only; `Index.md` fully regenerated each run |
 | Slug-based deduplication | IV. Obsidian-Native Storage | ✅ Pass | `slugify(title + company)` in-memory + vault check |
+| Rejected-score cache | IV. Obsidian-Native Storage | ✅ Pass | `_discarded.txt` persists rejected slugs; plain text, append-only |
 | No server/DB/API | V. CLI Simplicity | ✅ Pass | Single `python main.py`; launchd scheduling only |
-| Pipeline ≤ 10 min | V. CLI Simplicity | ✅ Pass | 3 sources × 2 queries × 20 jobs; no blocking waits except Playwright |
+| Pipeline ≤ 10 min | V. CLI Simplicity | ✅ Pass | Validated: ~4 min with `qwen2.5:14b` × 20 jobs (down from 2h27 with 27B model) |
 
 ---
 
