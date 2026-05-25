@@ -11,7 +11,9 @@ from config import Config
 from llm import build_llm
 from obsidian.templates import render_index, render_job_note
 from obsidian.writer import (
+    load_discarded_slugs,
     load_existing_jobs,
+    mark_discarded,
     note_exists,
     save_note,
     slugify_job,
@@ -41,25 +43,6 @@ def _build_serper_queries() -> list[str]:
 
 
 def main() -> None:
-    # TODO (T035): Implement full pipeline orchestration:
-    # 1. Print "[JOB FINDER] Starting run — {timestamp}"
-    # 2. Config.load() — sys.exit(1) on ValueError/RuntimeError
-    # 3. build_llm(cfg) — sys.exit(1) on RuntimeError
-    # 4. Print "[LLM] Provider: {provider} ({model})"
-    # 5. parse_pdf("Douglas Hennrich.pdf") — sys.exit(1) on FileNotFoundError/ValueError
-    # 6. Print "[RESUME] Loaded profile from: ..."
-    # 7. Instantiate HimalayasScraper(), GoogleJobsScraper(api_key=...), IndeedScraper()
-    # 8. For each scraper × each query: scraper.fetch(query, max_jobs_per_source)
-    #    log [SCRAPER] lines per contracts/cli.md
-    # 9. In-memory dedup: seen_slugs set → unique_pairs list; log [DEDUP] line
-    # 10. Vault dedup: note_exists() per slug → new_pairs list; log [DEDUP] line
-    # 11. For each (slug, job) in new_pairs:
-    #     a. analysis = analyze(job, profile, llm); log [SCORE] line
-    #     b. If score >= cfg.min_score: render_job_note + save_note; log [SAVED] line
-    #     c. Else: increment skipped_score
-    # 12. load_existing_jobs + render_index + update_index; log [INDEX] line
-    # 13. Print summary: "Done in Xs.\nSaved: N | Skipped (dup): N | Skipped (score): N | Errors: N source(s)"
-    # 14. sys.exit(0)
     print(f"[JOB FINDER] Starting run — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     start = time.time()
 
@@ -125,21 +108,28 @@ def main() -> None:
     skipped_dup = len(all_jobs) - len(unique_pairs)
     print(f"[DEDUP] In-memory: {skipped_dup} duplicates removed, {len(unique_pairs)} unique jobs")
 
+    discarded_slugs = load_discarded_slugs(cfg.obsidian_notes_folder)
+
     new_pairs: list[tuple[str, Job]] = []
     for slug, job in unique_pairs:
         if note_exists(slug, cfg.obsidian_notes_folder):
             skipped_dup += 1
+        elif slug in discarded_slugs:
+            skipped_dup += 1
         else:
             new_pairs.append((slug, job))
     print(
-        f"[DEDUP] Vault: {len(unique_pairs) - len(new_pairs)} already saved, "
-        f"{len(new_pairs)} new jobs to process"
+        f"[DEDUP] Vault: {len(unique_pairs) - len(new_pairs)} already seen "
+        f"({len(discarded_slugs)} rejected cache), {len(new_pairs)} new jobs to process"
     )
 
     saved = 0
     skipped_score = 0
     rate_limited = False
-    for slug, job in new_pairs:
+    total = len(new_pairs)
+    for i, (slug, job) in enumerate(new_pairs):
+        print(f"[SCORE] ({i + 1}/{total}) Analisando: {job.title} @ {job.company} ...")
+        job_start = time.time()
         try:
             analysis = analyze(job, profile, llm)
         except openai.RateLimitError as e:
@@ -150,7 +140,8 @@ def main() -> None:
             print(f"[ERROR] LLM error scoring '{job.title}': {e}")
             skipped_score += 1
             continue
-        print(f"[SCORE] {job.title} @ {job.company} → {analysis.score}/100 {analysis.tier}")
+        job_elapsed = time.time() - job_start
+        print(f"[SCORE] ({i + 1}/{total}) {job.title} @ {job.company} → {analysis.score}/100 {analysis.tier} [{job_elapsed:.1f}s]")
         if analysis.score >= cfg.min_score:
             date_str = datetime.now().strftime("%Y-%m-%d")
             content = render_job_note(job, analysis, date_str)
@@ -158,6 +149,7 @@ def main() -> None:
             print(f"[SAVED] {slug}.md → {path}")
             saved += 1
         else:
+            mark_discarded(slug, cfg.obsidian_notes_folder)
             skipped_score += 1
 
     existing = load_existing_jobs(cfg.obsidian_notes_folder)

@@ -14,3 +14,8 @@
 - **v2 removed `stealth_async`** — `playwright-stealth` v2.x dropped the top-level `stealth_async` function entirely. The only export for async page stealth is now `Stealth` (class) with `await Stealth().apply_stealth_async(page)`.
 - **Fix applied to `scrapers/indeed.py`**: changed `from playwright_stealth import stealth_async` → `from playwright_stealth import Stealth`, and changed call site `await stealth_async(page)` → `await Stealth().apply_stealth_async(page)`.
 - **Smoke test confirmed**: after the fix, `IndeedScraper.fetch("senior nodejs developer remote", 2)` returned 2 jobs without errors.
+
+### 2026-05-24 — T021 field mapping confirmed / T023 detail-page stealth fix
+
+- **Himalayas API uses flat `companyName` field** (not nested `company.name`) — confirmed by passing T024 smoke test returning 5 real jobs with correct company names.
+- **playwright-stealth: use `Stealth().apply_stealth_async(page)` pattern** — NOT standalone `stealth_async(page)`. The v2 class-based API is the only valid approach; the function-based `stealth_async` was removed. This applies to ALL page handles, including detail pages opened mid-scrape.

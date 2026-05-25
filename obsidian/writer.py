@@ -31,6 +31,26 @@ def update_index(job_folder: str, index_content: str) -> None:
         f.write(index_content)
 
 
+_DISCARDED_FILE = "_discarded.txt"
+
+
+def load_discarded_slugs(job_folder: str) -> set[str]:
+    """Return set of slugs previously scored and rejected (score below threshold)."""
+    path = os.path.join(job_folder, _DISCARDED_FILE)
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        return {line.strip() for line in f if line.strip()}
+
+
+def mark_discarded(slug: str, job_folder: str) -> None:
+    """Append a rejected slug to the discarded cache so it is skipped on future runs."""
+    os.makedirs(job_folder, exist_ok=True)
+    path = os.path.join(job_folder, _DISCARDED_FILE)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(slug + "\n")
+
+
 def load_existing_jobs(job_folder: str) -> list[dict]:
     if not os.path.isdir(job_folder):
         return []

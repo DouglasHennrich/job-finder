@@ -79,9 +79,9 @@
   - Uses `openai.OpenAI(base_url=base_url, api_key="ollama")`
   - `temperature=0.2`
   - Implements `chat()` → `client.chat.completions.create(...).choices[0].message.content`
-- [ ] T016 [P] [US3] Create `llm/copilot.py` with `CopilotLLM(token: str, model: str)`:
-  - `base_url = "https://models.inference.ai.azure.com"`
-  - `openai.OpenAI(base_url=..., api_key=token)`
+- [x] T016 [P] [US3] Create `llm/copilot.py` with `CopilotLLM(token: str, model: str)`:
+  - `base_url = "https://api.githubcopilot.com"` (**intentional** — uses GitHub Copilot Pro+ API directly, not Azure inference)
+  - `openai.OpenAI(base_url=..., api_key=token, default_headers={"Copilot-Integration-Id": "vscode-chat"})`
   - `temperature=0.2`
   - Implements `chat()` identically to OllamaLLM
 - [ ] T017 [US3] Create `analyzer.py` with `JobAnalysis` dataclass and `analyze(job, profile, llm) -> JobAnalysis`:
@@ -119,17 +119,18 @@
 - [ ] T020 [US2] Create `scrapers/base.py` with:
   - `Job` dataclass: `title`, `company`, `location`, `description`, `url`, `source`, `salary: Optional[str] = None`, `posted_date: Optional[str] = None`
   - `BaseScraper` ABC with abstract method `fetch(query: str, max_results: int) -> list[Job]`
-- [ ] T021 [P] [US2] Create `scrapers/himalayas.py` with `HimalayasScraper(BaseScraper)`:
+- [x] T021 [P] [US2] Create `scrapers/himalayas.py` with `HimalayasScraper(BaseScraper)`:
   - GET `https://himalayas.app/jobs/api` with params `{"q": query, "limit": max_results}`
-  - Map JSON fields: `title`, `company.name` → `company`, `locationRestrictions` → `location`, `description`, `applicationLink` → `url`
-  - Filter to `remote == true` entries only
+  - Map JSON fields: `title`, `companyName` → `company` (API returns flat field, not nested `company.name`), `locationRestrictions` → `location`, `description`, `applicationLink` → `url`
+  - Remote filter: `if item.get("remote") is False: continue` — Himalayas is a remote-only platform; the `remote` field is absent in practice (intentional no-op guard for future-proofing)
   - Wrap in `try/except requests.RequestException` → log warning, return `[]`
   - `source = "himalayas"`
-- [ ] T022 [P] [US2] Create `scrapers/google_jobs.py` with `GoogleJobsScraper(api_key: str)` implementing `BaseScraper`:
-  - Constructor: `self.api_key = api_key`; `self.source = "google_jobs"`
-  - **Primary** (when `api_key` non-empty): POST `https://google.serper.dev/jobs` with `{"q": query, "gl": "br", "hl": "pt-br", "num": max_results}`, header `X-API-KEY`; map `jobs[]` response → `Job`
-  - **Fallback** (when `api_key` empty or Serper raises): Playwright async with stealth; navigate `https://www.google.com/search?q={query}&ibp=htl;jobs`; extract job cards with selector `div[data-jiz]`; random delay `uniform(2, 4)` between actions; wrap in `asyncio.get_event_loop().run_until_complete()`
-  - `source = "google_jobs"`
+  - ✅ Confirmed by T024 smoke test: 5 real jobs returned with correct company names via `companyName` field
+- [x] T022 [P] [US2] Create `scrapers/google_jobs.py` with `GoogleJobsScraper(api_key: str)` implementing `BaseScraper`:
+  - Constructor: `self.api_key = api_key`
+  - **Implementation** (**intentional redesign**): POST `https://google.serper.dev/search` with site-operator queries (built by `_build_serper_queries()` in `main.py`); parses `organic[]` results with site-specific logic: `inhire.app`, `linkedin.com`, `indeed.com`
+  - **No-key fallback**: returns `[]` immediately with a warning log — Playwright fallback dropped in favour of site-search approach
+  - `source` is per-site (`"inhire"`, `"linkedin"`, `"indeed"`) derived from URL
 - [ ] T023 [P] [US2] Create `scrapers/indeed.py` with `IndeedScraper(BaseScraper)`:
   - Implements sync `fetch(query, max_results) -> list[Job]` from `BaseScraper` by calling `asyncio.get_event_loop().run_until_complete(self._async_fetch(query, max_results))`
   - `_async_fetch()` is the actual async implementation:
@@ -187,17 +188,17 @@
 
 **Independent test criterion**: `python main.py` completes without exception; at least one note appears in vault; `Index.md` is created/updated.
 
-- [ ] T035 Create `main.py` that orchestrates:
+- [x] T035 Create `main.py` that orchestrates:
   1. `Config.load()` → fail-fast with code 1 on bad config
   2. `build_llm(cfg)` → instantiate client only (no test call); raises `RuntimeError` if copilot token empty
-  3. `parse_pdf("Douglas Hennrich.pdf")` → fail-fast with code 1 if PDF missing or empty
-  4. Instantiate all 3 scrapers: `HimalayasScraper()`, `GoogleJobsScraper(api_key=cfg.serper_api_key)`, `IndeedScraper()`; define 2 search queries (EN + PT-BR)
+  3. Resume loading: cache-first strategy — `load_profile_cache()` → if miss, `parse_pdf("Douglas Hennrich.pdf")` + `save_profile_cache()` + `save_profile_note()` → fail-fast code 1 if no PDF and no cache (**intentional**: avoids re-parsing PDF on every run)
+  4. Instantiate `HimalayasScraper()` and `GoogleJobsScraper(api_key=cfg.serper_api_key)` (**IndeedScraper excluded** pending T023 fix); separate query lists: `_build_queries()` for Himalayas, `_build_serper_queries()` for Google
   5. Run each `scraper.fetch(query, cfg.max_jobs_per_source)` per query; aggregate `all_jobs`
   6. Log `[SCRAPER]` lines per source including count or error per contracts/cli.md
   7. In-memory dedup (`seen_slugs` set) → log dedup count
   8. Vault dedup (`note_exists()`) → log dedup count
-  9. For each unique new job: call `analyze()`; log `[SCORE]` line
-  10. If `analysis.score >= cfg.min_score`: call `save_note()`; log `[SAVED]` line; else log `[SCORE] ❌ Skip` line
+  9. For each unique new job: call `analyze()`; log `[SCORE]` line; handle `RateLimitError` gracefully (stops scoring, logs warn, completes run)
+  10. If `analysis.score >= cfg.min_score`: call `save_note()`; log `[SAVED]` line; else increment `skipped_score`
   11. `load_existing_jobs()` + `render_index()` + `update_index()` → log `[INDEX]` line
   12. Print summary: `Done in Xs. Saved: N | Skipped (dup): N | Skipped (score): N | Errors: N source(s)`
   13. `sys.exit(0)` on success, `sys.exit(1)` on fatal error

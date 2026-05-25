@@ -1,3 +1,5 @@
+import time
+
 import openai
 
 from llm.base import BaseLLM
@@ -11,9 +13,13 @@ class OllamaLLM(BaseLLM):
         self.client = openai.OpenAI(base_url=base_url, api_key="ollama")
 
     def chat(self, system: str, user: str) -> str:
+        print(f"[LLM] Ollama ({self.model}) — enviando prompt...")
+        t0 = time.time()
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             temperature=0.2,
         )
+        elapsed = time.time() - t0
+        print(f"[LLM] Ollama respondeu em {elapsed:.1f}s")
         return response.choices[0].message.content

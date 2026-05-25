@@ -97,7 +97,7 @@ class IndeedScraper(BaseScraper):
                     if href:
                         try:
                             detail_page = await context.new_page()
-                            await stealth_async(detail_page)
+                            await Stealth().apply_stealth_async(detail_page)
                             await detail_page.goto(href)
                             await asyncio.sleep(random.uniform(1.5, 3.0))
                             desc_el = await detail_page.query_selector(
