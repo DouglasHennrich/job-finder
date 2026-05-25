@@ -19,28 +19,80 @@ from obsidian.writer import (
     slugify_job,
     update_index,
 )
-from resume.parser import load_profile_cache, parse_pdf, save_profile_cache, save_profile_note
+from resume.parser import extract_profile_keywords, load_profile_cache, parse_pdf, save_profile_cache, save_profile_note
+from resume.profile import Profile
 from scrapers.base import Job
+from scrapers.capgemini import CapgeminiScraper
 from scrapers.google_jobs import GoogleJobsScraper
 from scrapers.himalayas import HimalayasScraper
 from scrapers.linkedin import LinkedInScraper
 from scrapers.solides import SolidesScraper
 
 
-def _build_queries() -> list[str]:
-    """Generic queries for scrapers that accept free-text search (e.g. Himalayas)."""
+_SENIORITY_WORDS = {"junior", "mid", "senior", "lead", "staff", "principal", "pleno"}
+
+_FALLBACK_QUERIES = [
+    "fullstack developer nodejs react remote",
+    "desenvolvedor fullstack nodejs react remoto",
+]
+_FALLBACK_SERPER_QUERIES = [
+    '(site:inhire.app OR site:linkedin.com/jobs OR site:indeed.com) ("fullstack" OR "full stack developer") ("nodejs") ("react") remote',
+    '(site:inhire.app OR site:linkedin.com/jobs OR site:indeed.com) ("fullstack" OR "full stack developer") ("nodejs") ("react") remoto',
+]
+
+
+def _strip_seniority(role: str) -> str:
+    """Remove seniority prefix words from a role string (e.g. 'senior fullstack engineer' → 'fullstack engineer')."""
+    words = role.lower().split()
+    return " ".join(w for w in words if w not in _SENIORITY_WORDS).strip()
+
+
+def _role_or_term(role: str) -> str:
+    """Build a Serper OR term from the role without seniority.
+
+    'senior fullstack engineer' → '("fullstack" OR "fullstack engineer")'
+    """
+    stripped = _strip_seniority(role)
+    words = stripped.split()
+    if not stripped:
+        return '("fullstack")'
+    if len(words) == 1:
+        return f'("{stripped}")'
+    short = words[0]  # first meaningful word, e.g. "fullstack"
+    return f'("{short}" OR "{stripped}")'
+
+
+def _build_queries(profile: Profile) -> list[str]:
+    """Build generic queries from the resume profile (Himalayas, LinkedIn, etc.).
+
+    Seniority is intentionally excluded — it is filtered at scoring time by the LLM.
+    Falls back to hardcoded defaults if keywords were not extracted.
+    """
+    if not profile.role and not profile.skills:
+        return _FALLBACK_QUERIES
+    role = _strip_seniority(profile.role) if profile.role else "fullstack developer"
+    top_skills = " ".join(profile.skills[:3]) if profile.skills else "nodejs react"
     return [
-        "senior fullstack developer nodejs react remote",
-        "desenvolvedor fullstack senior nodejs react remoto",
+        f"{role} {top_skills} remote",
+        f"{role} {top_skills} remoto",
     ]
 
 
-def _build_serper_queries() -> list[str]:
-    """Pre-formatted Serper site-search queries for LinkedIn, Inhire and Indeed."""
+def _build_serper_queries(profile: Profile) -> list[str]:
+    """Build Serper site-search queries from the resume profile.
+
+    Role is expanded as an OR term (short form OR full form) to cast a wider net.
+    Seniority is intentionally excluded — filtered at scoring time by the LLM.
+    Falls back to hardcoded defaults if keywords were not extracted.
+    """
+    if not profile.role and not profile.skills:
+        return _FALLBACK_SERPER_QUERIES
     sites = "(site:inhire.app OR site:linkedin.com/jobs OR site:indeed.com)"
+    role_term = _role_or_term(profile.role) if profile.role else '("fullstack")'
+    skill_terms = " ".join(f'("{s}")' for s in profile.skills[:3]) if profile.skills else '("nodejs") ("react")'
     return [
-        f'{sites} ("full stack") ("node") ("react") remote',
-        f'{sites} ("full stack") ("nodejs") ("react") remoto',
+        f"{sites} {role_term} {skill_terms} remote",
+        f"{sites} {role_term} {skill_terms} remoto",
     ]
 
 
@@ -67,17 +119,25 @@ def main() -> None:
         profile = load_profile_cache(cfg.obsidian_job_folder)
         if profile:
             print(f"[RESUME] Loaded profile from cache: {cfg.obsidian_job_folder}")
+            if not profile.role and not profile.skills:
+                print("[RESUME] Cache missing keywords — extracting via LLM...")
+                profile = extract_profile_keywords(profile, llm)
+                save_profile_cache(profile, cfg.obsidian_job_folder)
+                print(f"[RESUME] Keywords extracted and cached: role={profile.role!r}, seniority={profile.seniority!r}, skills={profile.skills}")
         else:
             profile = parse_pdf("Douglas Hennrich.pdf")
+            print(f"[RESUME] Parsed PDF: {profile.pdf_path}")
+            print("[RESUME] Extracting keywords via LLM...")
+            profile = extract_profile_keywords(profile, llm)
             save_profile_cache(profile, cfg.obsidian_job_folder)
-            print(f"[RESUME] Parsed PDF and cached profile: {profile.pdf_path}")
+            print(f"[RESUME] Keywords extracted and cached: role={profile.role!r}, seniority={profile.seniority!r}, skills={profile.skills}")
         save_profile_note(profile, cfg.obsidian_job_folder)
     except (FileNotFoundError, ValueError) as e:
         print(e)
         sys.exit(1)
 
-    queries = _build_queries()
-    serper_queries = _build_serper_queries()
+    queries = _build_queries(profile)
+    serper_queries = _build_serper_queries(profile)
     print(f"[QUERIES] generic={queries}")
     print(f"[QUERIES] serper={serper_queries}")
 
@@ -86,8 +146,9 @@ def main() -> None:
         (GoogleJobsScraper(api_key=cfg.serper_api_key), serper_queries),
         (LinkedInScraper(), queries),
         (SolidesScraper(), queries),
+        (CapgeminiScraper(), queries),
     ]
-    print("[SCRAPER] Registered: HimalayasScraper, GoogleJobsScraper, LinkedInScraper, SolidesScraper")
+    print("[SCRAPER] Registered: HimalayasScraper, GoogleJobsScraper, LinkedInScraper, SolidesScraper, CapgeminiScraper")
 
     all_jobs: list[Job] = []
     scraper_errors = 0
@@ -113,7 +174,7 @@ def main() -> None:
     skipped_dup = len(all_jobs) - len(unique_pairs)
     print(f"[DEDUP] In-memory: {skipped_dup} duplicates removed, {len(unique_pairs)} unique jobs")
 
-    discarded_slugs = load_discarded_slugs(cfg.obsidian_notes_folder)
+    discarded_slugs = load_discarded_slugs(cfg.obsidian_job_folder)
 
     new_pairs: list[tuple[str, Job]] = []
     for slug, job in unique_pairs:
@@ -154,11 +215,21 @@ def main() -> None:
             print(f"[SAVED] {slug}.md → {path}")
             saved += 1
         else:
-            mark_discarded(slug, cfg.obsidian_notes_folder)
+            mark_discarded(
+                slug,
+                cfg.obsidian_job_folder,
+                title=job.title,
+                company=job.company,
+                score=analysis.score,
+                tier=analysis.tier,
+                source=job.source,
+                url=job.url,
+            )
             skipped_score += 1
 
+    active_providers = sorted({job.source for job in all_jobs})
     existing = load_existing_jobs(cfg.obsidian_notes_folder)
-    index_content = render_index(existing)
+    index_content = render_index(existing, discarded_count=len(discarded_slugs), providers=active_providers)
     update_index(cfg.obsidian_job_folder, index_content)
     print(f"[INDEX] Updated Index.md with {len(existing)} jobs")
 

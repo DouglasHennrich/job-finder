@@ -1,10 +1,10 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.0.1
+Version change: 1.0.1 → 1.0.2
 Modified principles:
-  - IV. Obsidian-Native Storage: added `_discarded.txt` rejected-score cache to storage
-    contract; updated rationale to remove "no external state file" claim.
+  - V. CLI Simplicity: updated entrypoint reference from `python main.py` to
+    `python src/main.py` to reflect spec 003 src/ restructure.
 Added sections: none
 Removed sections: none
 
@@ -13,7 +13,9 @@ Templates requiring updates:
   ✅ .specify/templates/plan-template.md — no constitution-specific change needed
   ✅ .specify/templates/spec-template.md — no change needed
   ✅ .specify/templates/tasks-template.md — no change needed
-  ✅ specs/001-job-finder/plan.md — Constitution Check updated to v1.0.1 + new gate row
+  ⚠ specs/001-job-finder/plan.md — still references `python main.py` (historical; pre-003)
+  ⚠ specs/002-linkedin-solides-scrapers/plan.md — still references `python main.py` (historical; pre-003)
+  ✅ specs/003-src-restructure-capgemini-scraper/plan.md — already uses `python src/main.py`
 
 Follow-up TODOs: none
 -->
@@ -77,7 +79,7 @@ run (3 sources × 2 queries × up to 20 jobs/source) MUST complete within 10 min
 the target macOS machine.
 
 **Rationale**: Complexity compounds maintenance cost. This tool's value is in daily
-automation, not architectural elegance. Keep it runnable by a single `python main.py`.
+automation, not architectural elegance. Keep it runnable by a single `python src/main.py`.
 
 ## Quality Gates
 
@@ -112,4 +114,4 @@ All implementation decisions MUST be evaluated against principles I–V before p
 Complexity that appears to violate Principle V (Simplicity) requires explicit justification
 documented in the relevant `plan.md`.
 
-**Version**: 1.0.1 | **Ratified**: 2026-05-24 | **Last Amended**: 2026-05-24
+**Version**: 1.0.2 | **Ratified**: 2026-05-24 | **Last Amended**: 2026-05-25
