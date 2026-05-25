@@ -3,6 +3,7 @@ from __future__ import annotations
 import glob
 import os
 import re
+from datetime import datetime
 
 from slugify import slugify as _slugify
 
@@ -31,7 +32,16 @@ def update_index(job_folder: str, index_content: str) -> None:
         f.write(index_content)
 
 
-_DISCARDED_FILE = "_discarded.txt"
+_DISCARDED_FILE = "Discarded.md"
+
+_DISCARDED_HEADER = (
+    "---\n"
+    "description: Jobs analyzed and discarded (score below threshold). Auto-managed by job-finder.\n"
+    "---\n\n"
+    "# Discarded Jobs\n\n"
+    "| Slug | Title | Company | Score | Tier | Source | Date | URL |\n"
+    "|------|-------|---------|-------|------|--------|------|-----|\n"
+)
 
 
 def load_discarded_slugs(job_folder: str) -> set[str]:
@@ -39,16 +49,45 @@ def load_discarded_slugs(job_folder: str) -> set[str]:
     path = os.path.join(job_folder, _DISCARDED_FILE)
     if not os.path.exists(path):
         return set()
+    slugs: set[str] = set()
     with open(path, encoding="utf-8") as f:
-        return {line.strip() for line in f if line.strip()}
+        for line in f:
+            line = line.strip()
+            if not line.startswith("| "):
+                continue
+            parts = line.split("|")
+            if len(parts) < 2:
+                continue
+            slug = parts[1].strip()
+            if slug and slug != "Slug" and not slug.startswith("---"):
+                slugs.add(slug)
+    return slugs
 
 
-def mark_discarded(slug: str, job_folder: str) -> None:
-    """Append a rejected slug to the discarded cache so it is skipped on future runs."""
+def mark_discarded(
+    slug: str,
+    job_folder: str,
+    *,
+    title: str = "",
+    company: str = "",
+    score: int = 0,
+    tier: str = "",
+    source: str = "",
+    url: str = "",
+) -> None:
+    """Append a rejected job as a table row in Discarded.md so it appears in Obsidian."""
     os.makedirs(job_folder, exist_ok=True)
     path = os.path.join(job_folder, _DISCARDED_FILE)
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(_DISCARDED_HEADER)
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    safe_title = (title or slug).replace("|", "\\|")
+    safe_company = company.replace("|", "\\|")
+    url_cell = f"[link]({url})" if url else ""
+    row = f"| {slug} | {safe_title} | {safe_company} | {score} | {tier} | {source} | {date_str} | {url_cell} |\n"
     with open(path, "a", encoding="utf-8") as f:
-        f.write(slug + "\n")
+        f.write(row)
 
 
 def load_existing_jobs(job_folder: str) -> list[dict]:

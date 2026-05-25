@@ -9,7 +9,7 @@
     <key>ProgramArguments</key>
     <array>
       <string>/Users/douglashennrich/Documents/Projetos/job-finder/.venv/bin/python</string>
-      <string>/Users/douglashennrich/Documents/Projetos/job-finder/main.py</string>
+      <string>/Users/douglashennrich/Documents/Projetos/job-finder/src/main.py</string>
     </array>
 
     <key>WorkingDirectory</key>

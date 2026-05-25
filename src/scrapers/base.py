@@ -12,7 +12,7 @@ class Job:
     location: str
     description: str
     url: str
-    source: str  # "google_jobs" | "indeed" | "himalayas" | "linkedin" | "solides"
+    source: str  # "google_jobs" | "indeed" | "himalayas" | "linkedin" | "solides" | "capgemini"
     salary: Optional[str] = None
     posted_date: Optional[str] = None
 

@@ -4,6 +4,15 @@
 - Phase 3 (T002): Implemented scrapers/linkedin.py — LinkedInScraper with Playwright + stealth, humanisation delays, .job-search-card selector
 - Phase 4 (T004): Implemented scrapers/solides.py — SolidesScraper with requests REST API, home-office filter, HTML stripping
 
+## 2026-05-25 — Phase 4: US2 Capgemini Scraper (T010–T012)
+
+- T010: Created `src/scrapers/capgemini.py` — `CapgeminiScraper` using `requests.get` + `BeautifulSoup(html.parser)`. Parses `<a href>` elements whose href contains `/jobs/`; prepends `https://www.capgemini.com` for relative URLs; respects `max_results`; wraps all logic in `try/except`; logs warning and returns `[]` on any error.
+- T011: Updated `src/scrapers/base.py` `source` field comment to include `"capgemini"`.
+- T012: Created `tests/unit/test_capgemini_scraper.py` — 3/3 smoke tests pass.
+- Learning: `beautifulsoup4` was in `requirements.txt` but not installed in the venv — must verify venv state, not just requirements file.
+- Learning: Capgemini job anchors use relative `/jobs/...` hrefs; prepend base URL to build valid absolute links.
+- Learning: Skip anchors with empty `.get_text()` to avoid ghost Job entries from icon-only links.
+
 ## Learnings
 
 ### 2026-05-24 — Scraper Fixes (T021/T022/T023)

@@ -45,7 +45,7 @@ status: new
 """
 
 
-def render_index(jobs_data: list[dict]) -> str:
+def render_index(jobs_data: list[dict], discarded_count: int = 0, providers: list[str] | None = None) -> str:
     tiers = {
         "🔥 Must Apply": [],
         "✅ Good Fit": [],
@@ -63,12 +63,18 @@ def render_index(jobs_data: list[dict]) -> str:
     for key in tiers:
         tiers[key].sort(key=lambda j: int(j.get("score", 0)), reverse=True)
 
+    if providers is None:
+        providers = sorted({job.get("source", "") for job in jobs_data if job.get("source")})
+    providers_str = ", ".join(providers) if providers else "—"
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lines = [
         "# Job Finder — Index",
         "",
         f"**Last updated:** {now}",
         f"**Total:** {len(jobs_data)} jobs saved",
+        f"**Discarded:** {discarded_count} jobs below threshold",
+        f"**Providers:** {providers_str}",
         "",
     ]
 

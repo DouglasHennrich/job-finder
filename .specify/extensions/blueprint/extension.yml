@@ -25,7 +25,7 @@ provides:
 hooks:
   after_tasks:
     command: "speckit.blueprint.generate"
-    optional: true
+    optional: false
     prompt: "Generate blueprint from tasks?"
     description: "Auto-generate blueprint.md after task generation"
 tags:
