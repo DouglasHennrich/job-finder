@@ -53,6 +53,13 @@ hooks:
     prompt: Commit outstanding changes before implementation?
     description: Auto-commit before implementation
     condition: null
+  - extension: squad
+    command: speckit.squad.route
+    enabled: true
+    optional: false
+    prompt: Ensuring tasks are routed to Squad agents before implementation...
+    description: Routes tasks to agents if not already done after task generation
+    condition: null
   before_checklist:
   - extension: git
     command: speckit.git.commit
@@ -96,7 +103,7 @@ hooks:
   - extension: squad
     command: speckit.squad.generate
     enabled: true
-    optional: true
+    optional: false
     prompt: Spec updated — regenerate Squad agent definitions?
     description: Keeps Squad agents aligned as the spec evolves
     condition: null
@@ -134,8 +141,8 @@ hooks:
   - extension: squad
     command: speckit.squad.route
     enabled: true
-    optional: true
-    prompt: Tasks generated — route them to Squad agents?
+    optional: false
+    prompt: Routing tasks to Squad agents...
     description: Distributes new tasks to the right agents automatically
     condition: null
   after_implement:

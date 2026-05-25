@@ -8,6 +8,8 @@ How to decide who handles what.
 |-----------|----------|----------|
 | Config, env, main pipeline, PDF parsing, resume | python-engineer | config.py, main.py, resume/parser.py, requirements.txt, launchd setup |
 | Web scraping, Playwright, Serper.dev, Himalayas, Indeed | scraping-engineer | scrapers/google_jobs.py, scrapers/indeed.py, scrapers/himalayas.py, bot evasion |
+| LinkedIn scraping, `scrapers/linkedin.py` | scraping-engineer | scrapers/linkedin.py, LinkedIn public job search, playwright-stealth |
+| Solides REST API, `scrapers/solides.py` | scraping-engineer | scrapers/solides.py, apigw.solides.com.br, HTML stripping, home-office filter |
 | LLM providers, prompt design, job fit scoring | ai-engineer | llm/ollama.py, llm/copilot.py, analyzer.py, prompt tuning |
 | Obsidian notes, Markdown templates, vault I/O, index | obsidian-engineer | obsidian/templates.py, obsidian/writer.py, Index.md generation |
 | Code review | ralph | Review PRs, check quality, suggest improvements |
@@ -21,7 +23,7 @@ How to decide who handles what.
 | `main.py` orchestration, deduplication logic | python-engineer | main.py, seen_slugs dedup, pipeline wiring |
 | `llm/base.py`, ABC/factory patterns for LLM | ai-engineer | llm/__init__.py, build_llm factory |
 | `analyzer.py`, prompt design, JSON parse | ai-engineer | analyzer.py, scoring tiers, pt-BR justification |
-| `scrapers/base.py`, Job dataclass | scraping-engineer | scrapers/base.py |
+| `scrapers/base.py`, Job dataclass | scraping-engineer | scrapers/base.py, source field update (linkedin, solides) |
 | `playwright-stealth`, bot evasion, humanise | scraping-engineer | scrapers/indeed.py, scrapers/google_jobs.py |
 | Serper.dev API, Google Jobs fallback | scraping-engineer | scrapers/google_jobs.py |
 | `obsidian/templates.py`, YAML frontmatter | obsidian-engineer | obsidian/templates.py, render_job_note, render_index |

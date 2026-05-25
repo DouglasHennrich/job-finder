@@ -1,5 +1,9 @@
 # scraping-engineer History
 
+- Phase 1 (T001): Updated scrapers/base.py source field comment to include linkedin and solides
+- Phase 3 (T002): Implemented scrapers/linkedin.py — LinkedInScraper with Playwright + stealth, humanisation delays, .job-search-card selector
+- Phase 4 (T004): Implemented scrapers/solides.py — SolidesScraper with requests REST API, home-office filter, HTML stripping
+
 ## Learnings
 
 ### 2026-05-24 — Scraper Fixes (T021/T022/T023)
