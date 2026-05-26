@@ -17,10 +17,12 @@ class CopilotLLM(BaseLLM):
             default_headers={"Copilot-Integration-Id": _COPILOT_INTEGRATION_ID},
         )
 
-    def chat(self, system: str, user: str) -> str:
+    def chat(self, system: str, user: str, json_mode: bool = False) -> str:
+        kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             temperature=0.2,
+            **kwargs,
         )
         return response.choices[0].message.content

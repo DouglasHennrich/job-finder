@@ -9,15 +9,24 @@ from resume.profile import Profile
 from scrapers.base import Job
 
 _SYSTEM_PROMPT = (
-    "You are an expert technical recruiter. Given a resume and a job description, "
-    "evaluate the candidate's fit for the position. "
-    "Respond ONLY with a valid JSON object containing these exact fields: "
+    "You are an expert technical recruiter evaluating a candidate's fit for a software engineering position.\n\n"
+    "## Scoring rubric (stack-first)\n"
+    "80-100: >=80% of required technical skills present; seniority aligned (+-1 level); missing skills are minor or quickly learnable.\n"
+    "60-79: 50-79% of required skills present OR seniority off by 1 level; clear technical fit with notable but addressable gaps.\n"
+    "40-59: 25-49% of required skills OR seniority off by 2 levels; partial fit, significant gaps but some transferable experience.\n"
+    "0-39: <25% of required skills OR completely wrong domain or stack.\n\n"
+    "## Language/technology rule\n"
+    "If a programming language or framework is explicitly REQUIRED by the job and the candidate lacks it, cap the score at 50. "
+    "If it is preferred or nice-to-have only, apply a minor deduction.\n\n"
+    "## Output format\n"
+    "Respond ONLY with a valid JSON object with these exact fields:\n"
     '"score" (integer 0-100), '
-    '"tier" (string), '
-    '"justification" (string in Brazilian Portuguese, 2-3 sentences), '
-    '"matching_skills" (array of strings), '
-    '"missing_skills" (array of strings). '
-    "No markdown, no extra text outside the JSON object."
+    '"justification" (string in Brazilian Portuguese, exactly 3 sentences: '
+    "1st — main reason for the score; "
+    "2nd — most critical gap or risk; "
+    '3rd — objective recommendation starting with "Vale candidatar" or "Evitar"), '
+    '"matching_skills" (array of up to 5 lowercase concrete technology names, most relevant first; exclude soft skills and generic tools like git or agile), '
+    '"missing_skills" (array of up to 5 lowercase concrete technology names required or strongly preferred by the job; exclude soft skills).'
 )
 
 
@@ -41,8 +50,23 @@ def _derive_tier(score: int) -> str:
 
 
 def analyze(job: Job, profile: Profile, llm: BaseLLM) -> JobAnalysis:
+    profile_lines = []
+    if profile.role:
+        profile_lines.append(f"Role: {profile.role}")
+    if profile.seniority:
+        profile_lines.append(f"Seniority: {profile.seniority}")
+    if profile.skills:
+        profile_lines.append(f"Key skills: {', '.join(profile.skills)}")
+
+    candidate_block = (
+        "CANDIDATE PROFILE:\n" + "\n".join(profile_lines) + "\n\n"
+        if profile_lines
+        else ""
+    )
+
     user_prompt = (
-        f"RESUME:\n{profile.raw_text}\n\n"
+        f"{candidate_block}"
+        f"RESUME (full text for context):\n{profile.raw_text}\n\n"
         f"JOB:\n"
         f"Title: {job.title}\n"
         f"Company: {job.company}\n"
@@ -50,7 +74,7 @@ def analyze(job: Job, profile: Profile, llm: BaseLLM) -> JobAnalysis:
         f"Description: {job.description}"
     )
 
-    raw_response = llm.chat(system=_SYSTEM_PROMPT, user=user_prompt)
+    raw_response = llm.chat(system=_SYSTEM_PROMPT, user=user_prompt, json_mode=True)
 
     # Stage 1: direct parse
     data = None
